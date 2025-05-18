@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Texas Insurance Claims Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+        h1 { color: #333; }
+        label { display: block; margin: 10px 0 5px; }
+        select, input { padding: 8px; width: 300px; margin-bottom: 15px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        .result { margin-top: 20px; font-weight: bold; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Texas Insurance Claims Calculator</h1>
+    <form id="claimsForm">
+        <label for="claim_type">Claim Type</label>
+        <select id="claim_type" onchange="toggleFields()" required>
+            <option value="">Select...</option>
+            <option value="Homeowners">Homeowners</option>
+            <option value="Renters">Renters</option>
+            <option value="Auto">Auto</option>
+            <option value="Inland Marine">Inland Marine</option>
+            <option value="Ocean Marine">Ocean Marine</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Fire">Fire</option>
+            <option value="Flood">Flood</option>
+            <option value="Workers' Compensation">Workers' Compensation</option>
+        </select>
+
+        <div id="standard_fields">
+            <label for="total_loss">Total Loss / Damage ($)</label>
+            <input type="number" id="total_loss" required>
+
+            <label for="deductible">Deductible ($)</label>
+            <input type="number" id="deductible" required>
+
+            <label for="depreciation">Depreciation ($, if ACV)</label>
+            <input type="number" id="depreciation" value="0">
+
+            <label for="coverage_type">Coverage Type</label>
+            <select id="coverage_type">
+                <option value="RCV">Replacement Cost (RCV)</option>
+                <option value="ACV">Actual Cash Value (ACV)</option>
+            </select>
+        </div>
+
+        <div id="auto_fields" class="hidden">
+            <label for="medical_expenses">Medical Expenses ($)</label>
+            <input type="number" id="medical_expenses" value="0">
+
+            <label for="lost_wages_auto">Lost Wages ($)</label>
+            <input type="number" id="lost_wages_auto" value="0">
+
+            <label for="property_damage">Property Damage ($)</label>
+            <input type="number" id="property_damage" value="0">
+
+            <label for="pain_multiplier">Pain & Suffering Multiplier (1.5 - 5)</label>
+            <input type="number" step="0.1" id="pain_multiplier" value="1.5">
+
+            <label for="fault_percentage">Claimant Fault (%)</label>
+            <input type="number" id="fault_percentage" value="0">
+        </div>
+
+        <div id="wc_fields" class="hidden">
+            <label for="medical_expenses_wc">Medical Expenses ($)</label>
+            <input type="number" id="medical_expenses_wc" value="0">
+
+            <label for="lost_wages_wc">Lost Wages ($)</label>
+            <input type="number" id="lost_wages_wc" value="0">
+
+            <label for="copays">Co-pays ($)</label>
+            <input type="number" id="copays" value="0">
+        </div>
+
+        <button type="button" onclick="calculate()">Calculate Claim</button>
+    </form>
+
+    <div class="result" id="result"></div>
+
+    <script>
+        function toggleFields() {
+            const claimType = document.getElementById("claim_type").value;
+            document.getElementById("standard_fields").classList.remove("hidden");
+            document.getElementById("auto_fields").classList.add("hidden");
+            document.getElementById("wc_fields").classList.add("hidden");
+
+            if (claimType === "Auto") {
+                document.getElementById("standard_fields").classList.add("hidden");
+                document.getElementById("auto_fields").classList.remove("hidden");
+            } else if (claimType === "Workers' Compensation") {
+                document.getElementById("standard_fields").classList.add("hidden");
+                document.getElementById("wc_fields").classList.remove("hidden");
+            }
+        }
+
+        function calculate() {
+            const claimType = document.getElementById("claim_type").value;
+            let payment = 0;
+
+            if (claimType === "Auto") {
+                const medical = parseFloat(document.getElementById("medical_expenses").value) || 0;
+                const wages = parseFloat(document.getElementById("lost_wages_auto").value) || 0;
+                const damage = parseFloat(document.getElementById("property_damage").value) || 0;
+                const multiplier = parseFloat(document.getElementById("pain_multiplier").value) || 1.5;
+                const fault = parseFloat(document.getElementById("fault_percentage").value) || 0;
+
+                let painSuffering = (medical + wages) * multiplier;
+                payment = (medical + wages + damage + painSuffering) * (1 - fault / 100);
+            } else if (claimType === "Workers' Compensation") {
+                const medical = parseFloat(document.getElementById("medical_expenses_wc").value) || 0;
+                const wages = parseFloat(document.getElementById("lost_wages_wc").value) || 0;
+                const copays = parseFloat(document.getElementById("copays").value) || 0;
+                payment = medical + wages - copays;
+            } else {
+                const totalLoss = parseFloat(document.getElementById("total_loss").value) || 0;
+                const deductible = parseFloat(document.getElementById("deductible").value) || 0;
+                const depreciation = parseFloat(document.getElementById("depreciation").value) || 0;
+                const coverageType = document.getElementById("coverage_type").value;
+
+                payment = totalLoss - deductible;
+                if (["Homeowners", "Renters", "Flood"].includes(claimType) && coverageType === "ACV") {
+                    payment -= depreciation;
+                }
+            }
+
+            payment = payment < 0 ? 0 : payment;
+            document.getElementById("result").textContent = `Estimated Claim Payment: $${payment.toFixed(2)}`;
+        }
+    </script>
+</body>
+</html>
